@@ -170,6 +170,17 @@ if (!od.metaharness) { console.error('missing metaharness in optionalDependencie
 if (j.dependencies && j.dependencies.metaharness) { console.error('metaharness leaked into dependencies'); process.exit(1); }
 " 2>/dev/null && ok || bad "ruflo wrapper missing metaharness optionalDep"
 
+step "17j. audit-list — enumerate metaharness-audit records (iter 16)"
+F="$ROOT/scripts/audit-list.mjs"
+miss=""
+[[ -x "$F" ]] || miss="$miss not-executable"
+node --check "$F" 2>/dev/null || miss="$miss syntax-error"
+grep -q "metaharness-audit" "$F" || miss="$miss no-namespace"
+grep -q "audit-trend" "$F" || miss="$miss no-trend-pointer"
+grep -q "limit\|since" "$F" || miss="$miss no-filters"
+grep -q "newest first" "$F" || miss="$miss no-sort-doc"
+[[ -z "$miss" ]] && ok || bad "$miss"
+
 step "17i. audit-trend — diff two oia-audit snapshots (iter 15)"
 F="$ROOT/scripts/audit-trend.mjs"
 miss=""
