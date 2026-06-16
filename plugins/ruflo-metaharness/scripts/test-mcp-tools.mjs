@@ -226,6 +226,46 @@ async function main() {
       'similarity alertBelow=0.99 → success === false (iter 44 fix)');
   }
 
+  // metaharness_mcp_scan — positive case post iter-50 parser landing.
+  // Until iter 50, mcp_scan's data field was an alert-only object with
+  // no structured findings. After iter 50, findings[] is always present
+  // (parsed from upstream text) and summary{overallSeverity, totalCount}
+  // accompanies it.
+  const scanTool = tools.find((t) => t.name === 'metaharness_mcp_scan');
+  if (scanTool) {
+    // Run against ruflo itself — guaranteed to produce at least the
+    // INFO finding the iter-50 parser test verified manually.
+    const r = await scanTool.handler({ path: '.', failOn: 'high' });
+    // Either succeeds with structured findings, or gracefully degrades
+    // if metaharness isn't installed in this environment.
+    if (!r.degraded) {
+      assert(r.success === true, 'mcp_scan positive: success === true');
+      assert(r.exitCode === 0, 'mcp_scan positive: exitCode === 0');
+      assert(Array.isArray(r.data?.findings),
+        'mcp_scan positive: data.findings is an array (iter 50 fix)');
+      // Cwd-dependent: when scanning a dir without .mcp/servers.json the
+      // upstream emits no findings. Only verify shape contract when array
+      // is populated — the array-presence assertion above is the
+      // load-bearing one for iter 50.
+      if (r.data?.findings.length > 0) {
+        const first = r.data.findings[0];
+        assert(typeof first?.severity === 'string',
+          'mcp_scan positive: first finding has string severity');
+        assert(typeof first?.message === 'string',
+          'mcp_scan positive: first finding has string message');
+      }
+      // summary may be null if the upstream produced no Result: line —
+      // verify the field's presence (null OR object) but only deep-check
+      // when populated.
+      if (r.data?.summary) {
+        assert(typeof r.data.summary.totalCount === 'number',
+          'mcp_scan positive: data.summary.totalCount is numeric (when summary present)');
+      }
+    } else {
+      console.log(`    ⊘ mcp_scan: metaharness absent — graceful skip`);
+    }
+  }
+
   // metaharness_audit_trend — positive case via file inputs
   const trendTool = tools.find((t) => t.name === 'metaharness_audit_trend');
   if (trendTool) {

@@ -191,6 +191,22 @@ grep -q "execCli(\[\s*'-y'\s*,\s*'metaharness@latest'" "$F" 2>/dev/null || \
 grep -q "cwd: opts" "$F" || miss="$miss no-cwd-passthrough"
 [[ -z "$miss" ]] && ok || bad "$miss"
 
+step "17z15. iter-50 parser locked at MCP layer + doctor (iter 52)"
+miss=""
+# MCP runtime test enrolls mcp_scan positive case
+T="$ROOT/scripts/test-mcp-tools.mjs"
+grep -q "mcp_scan positive: data.findings is an array" "$T" 2>/dev/null || miss="$miss no-mcp-findings-mcp-assert"
+grep -q "mcp_scan positive: first finding has string severity" "$T" 2>/dev/null || miss="$miss no-severity-mcp-assert"
+grep -q "mcp_scan positive: data.summary.totalCount" "$T" 2>/dev/null || miss="$miss no-summary-mcp-assert"
+# Doctor verifies parseMcpScanText export + smoke
+DOC="$ROOT/../../v3/@claude-flow/cli/src/commands/doctor.ts"
+grep -q "parseMcpScanText" "$DOC" 2>/dev/null || miss="$miss doctor-no-parser-import"
+grep -q "iter 50 — needed by mcp-scan + oia-audit" "$DOC" 2>/dev/null || miss="$miss doctor-no-iter50-marker"
+grep -q "parseMcpScanText returned unexpected shape" "$DOC" 2>/dev/null || miss="$miss doctor-no-empty-input-check"
+# Runtime: extended test passes (now 103+ assertions)
+node "$T" >/dev/null 2>&1 || miss="$miss runtime-fails"
+[[ -z "$miss" ]] && ok || bad "$miss"
+
 step "17z14. roundtrip Stage 7 — drift detection actually fires on mutation (iter 51)"
 miss=""
 F="$ROOT/scripts/test-pipeline-roundtrip.mjs"

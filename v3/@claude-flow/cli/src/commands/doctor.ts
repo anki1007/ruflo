@@ -643,10 +643,35 @@ async function checkMetaharnessIntegration(): Promise<HealthCheck> {
         message: 'similarity() returned unexpected shape; module may be stale',
       };
     }
+
+    // iter 52 — also verify the iter-50 mcp-scan text parser exports
+    // correctly. parseMcpScanText is the shared util both mcp-scan.mjs
+    // and oia-audit.mjs depend on; if it's missing the audit-trend
+    // introduced/cleared diff silently degrades to dead code.
+    const harnessPath = join(pluginDir, 'scripts', '_harness.mjs');
+    const harnessMod = await import(harnessPath) as { parseMcpScanText?: (s: string) => unknown };
+    if (typeof harnessMod.parseMcpScanText !== 'function') {
+      return {
+        name: 'MetaHarness integration (ADR-150)',
+        status: 'fail',
+        message: '_harness.mjs does not export parseMcpScanText (iter 50 — needed by mcp-scan + oia-audit)',
+        fix: 'Reinstall ruflo or restore _harness.mjs from git',
+      };
+    }
+    // Smoke: parser handles empty input gracefully
+    const parsed = harnessMod.parseMcpScanText('') as { findings?: unknown };
+    if (!Array.isArray(parsed?.findings)) {
+      return {
+        name: 'MetaHarness integration (ADR-150)',
+        status: 'warn',
+        message: 'parseMcpScanText returned unexpected shape on empty input',
+      };
+    }
+
     return {
       name: 'MetaHarness integration (ADR-150)',
       status: 'pass',
-      message: 'plugin scripts intact, _similarity.mjs loads, smoke OK',
+      message: 'plugin scripts intact, _similarity.mjs + parseMcpScanText load, smoke OK',
     };
   } catch (e) {
     return {
