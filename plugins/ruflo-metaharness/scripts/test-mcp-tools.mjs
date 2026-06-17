@@ -134,12 +134,22 @@ async function main() {
       // iter 54 — composes 3 subprocesses, needs more time than the default.
       input = { dryRun: true, threshold: 0.5 };
     }
+    if (tool.name === 'metaharness_oia_audit') {
+      // iter 128 — composite audit runs 5 sub-audits (oia-manifest +
+      // threat-model + mcp-scan + score + genome) in parallel. Each
+      // shells out via npx. --dry-run skips memory persistence so the
+      // test doesn't pollute namespaces.
+      input = { dryRun: true };
+    }
 
     // iter 124 — bumped default 30s → 60s. The first MCP tool that shells
     // out via npx pays the cold-cache warmup cost (~25s observed), which
     // pushed metaharness_audit_list past the prior 30s budget intermittently.
-    // 90s for chain-tools like drift_from_history that compose 3 subprocesses.
-    const timeoutMs = tool.name === 'metaharness_drift_from_history' ? 90_000 : 60_000;
+    // iter 128 — oia_audit composes 5 sub-audits; same 90s budget as
+    // drift_from_history (also a chain-tool).
+    const isChainTool = tool.name === 'metaharness_drift_from_history'
+      || tool.name === 'metaharness_oia_audit';
+    const timeoutMs = isChainTool ? 90_000 : 60_000;
     const handlerPromise = tool.handler(input);
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error(`${timeoutMs / 1000}s handler timeout`)), timeoutMs));

@@ -116,7 +116,22 @@ export const ejectCommand: Command = {
     },
   ],
   async action(context: CommandContext): Promise<CommandResult> {
-    const opts = parseArgs((context as { args?: string[] }).args || []);
+    // iter 128 — flags declared on the Command get parsed by the CLI parser
+    // and land in context.flags (NOT context.options or context.args).
+    // Fall back to parseArgs(context.args) for programmatic invocations
+    // where the parser wasn't used (e.g. unit tests).
+    const ctx = context as { args?: string[]; flags?: Record<string, unknown> };
+    const parsedArgs = parseArgs(ctx.args || []);
+    const flagName = ctx.flags?.name as string | undefined;
+    const flagTarget = ctx.flags?.target as string | undefined;
+    const flagConfirm = ctx.flags?.confirm as boolean | undefined;
+    const flagFormat = ctx.flags?.format as 'table' | 'json' | undefined;
+    const opts: EjectOptions = {
+      name: flagName || parsedArgs.name,
+      target: flagTarget || parsedArgs.target,
+      confirm: typeof flagConfirm === 'boolean' ? flagConfirm : parsedArgs.confirm,
+      format: (flagFormat || parsedArgs.format) as 'table' | 'json',
+    };
 
     if (!opts.name) {
       output.writeln(output.error('eject: --name is required'));
