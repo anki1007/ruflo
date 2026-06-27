@@ -1,6 +1,6 @@
 ---
 name: security-scan
-description: Run full security scans on the codebase using Ruflo security tools
+description: Run full security scans on the codebase using Ruflo security tools. Use when reviewing PRs for security regressions, auditing auth/input-handling code, before production deploys, or when the user asks for a security check at quick/standard/full depth.
 allowed-tools: Bash(npx *) mcp__claude-flow__memory_store mcp__claude-flow__hooks_post-task Read Grep
 argument-hint: "[depth: quick|standard|full]"
 ---
